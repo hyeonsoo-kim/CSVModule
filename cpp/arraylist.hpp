@@ -1,10 +1,17 @@
-#ifndef __CSVMODULE_ARRAYLIST_HPP_
-#define __CSVMODULE_ARRAYLIST_HPP_
+#ifndef __CSVMODULE_ARRAYLIST_HPP__
+#define __CSVMODULE_ARRAYLIST_HPP__
 #include <algorithm>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#if __cplusplus < 201103L
+#define nullptr ((void*)0)
+#endif
+
+#if __cplusplus >= 201103L
+#include <utility>
+#endif
 
 template <class Tp>
 class ArrayList {
@@ -14,7 +21,10 @@ class ArrayList {
   ArrayList(const std::vector<Tp>& vec);              // constructor from vector
   ArrayList(const Tp& c, size_t n);                   // Fill constructor
   ArrayList(const ArrayList<Tp>& al);                 // copy constructor
-
+#if __cplusplus >= 201103L
+  ArrayList(std::initializer_list<Tp> ilist);
+#endif
+  //~ArrayList() {}
   void append(const Tp& x);               // append element to back
   void remove(const Tp& x);               // remove element at idx
   void extend(const ArrayList<Tp>& arr);  // extend(append) array list
@@ -32,6 +42,8 @@ class ArrayList {
   ArrayList<Tp>& operator+=(const ArrayList<Tp>& arr);  // extend and assign
   ArrayList<Tp> operator+(
       const ArrayList<Tp>& arr);  // extend and return exension
+  typename std::vector<Tp>::iterator begin() { return c.begin(); }
+  typename std::vector<Tp>::iterator end() { return c.end(); }
 
  private:
   std::vector<Tp> c;
@@ -41,33 +53,14 @@ class ArrayList {
 };
 
 #if __cplusplus >= 202002L
-template <class Tp>
-constexpr operator==(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-constexpr operator!=(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-constexpr operator>(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-constexpr operator<(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-constexpr operator>=(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-constexpr operator<=(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-constexpr operator<=>(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
+#define arrlist_relational_operator(op)                \
+  template <class Tp>                                  \
+  constexpr bool operator op(const ArrayList<Tp>& lhs, \
+                             const ArrayList<Tp>& rhs)
 #else
-template <class Tp>
-bool operator==(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-bool operator!=(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-bool operator>(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-bool operator<(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-bool operator>=(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
-template <class Tp>
-bool operator<=(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs);
+#define arrlist_relational_operator(op) \
+  template <class Tp>                   \
+  bool operator op(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs)
 #endif
 
 template <class Tp>
@@ -107,6 +100,12 @@ ArrayList<Tp>::ArrayList(const Tp& c, size_t n) : c(std::vector<Tp>(c, n)) {}
 template <class Tp>
 ArrayList<Tp>::ArrayList(const ArrayList<Tp>& al)
     : c(std::vector<Tp>(al.c.begin(), al.c.end())) {}
+
+#if __cplusplus >= 201103L
+template <class Tp>
+ArrayList<Tp>::ArrayList(std::initializer_list<Tp> ilist)
+    : c(std::vector<Tp>(ilist)) {}
+#endif
 
 template <class Tp>
 void ArrayList<Tp>::append(const Tp& x) {
@@ -167,6 +166,9 @@ ArrayList<Tp>::operator std::vector<Tp>() {
   return this->c;
 }
 
+/*
+ * assign and extend operators
+ */
 template <class Tp>
 ArrayList<Tp>& ArrayList<Tp>::operator=(const ArrayList<Tp>& arr) {
   this->c.clear();
@@ -187,43 +189,36 @@ ArrayList<Tp> ArrayList<Tp>::operator+(const ArrayList<Tp>& arr) {
   return ArrayList<Tp>(cpy);
 }
 /*
- * relational operatoes
+ * relational operators
  */
 
-#if __cplusplus >= 202002L
-#define relational_operator(op) \
-  template <class Tp>           \
-  constexpr operator op(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs)
-#else
-#define relational_operator(op) \
-  template <class Tp>           \
-  bool operator op(const ArrayList<Tp>& lhs, const ArrayList<Tp>& rhs)
-#endif
-
-relational_operator(==) {
-  return static_cast<std::vector<Tp>>(lhs) == static_cast<std::vector<Tp>>(rhs);
+arrlist_relational_operator(==) {
+  return static_cast<std::vector<Tp> >(lhs) ==
+         static_cast<std::vector<Tp> >(rhs);
 }
 
-relational_operator(!=) {
-  return static_cast<std::vector<Tp>>(lhs) != static_cast<std::vector<Tp>>(rhs);
+arrlist_relational_operator(!=) {
+  return !(static_cast<std::vector<Tp> >(lhs) =
+               static_cast<std::vector<Tp> >(rhs));
 }
 
-relational_operator(<) {
-  return static_cast<std::vector<Tp>>(lhs) < static_cast<std::vector<Tp>>(rhs);
+arrlist_relational_operator(<) {
+  std::vector<Tp>& lhv = static_cast<std::vector<Tp> >(lhs);
+  std::vector<Tp>& rhv = static_cast<std::vector<Tp> >(rhs);
+  return std::lexicographical_compare(lhv.begin(), lhv.end(), rhv.begin(),
+                                      rhv.end());
 }
 
-relational_operator(>) {
-  return static_cast<std::vector<Tp>>(lhs) > static_cast<std::vector<Tp>>(rhs);
-}
+arrlist_relational_operator(>) { return !(lhs < rhs) && !(lhs == rhs); }
 
-relational_operator(>=) { return !(lhs < rhs); }
+arrlist_relational_operator(>=) { return !(lhs < rhs); }
 
-relational_operator(<=) { return !(lhs > rhs); }
+arrlist_relational_operator(<=) { return (lhs < rhs) || (lhs == rhs); }
 
 #if __cplusplus >= 202002L
-relational_operator(<=>) {
-  return return static_cast<std::vector<Tp>>(lhs) <=>
-                ststic_cast<std::vector<Tp>>(rhs);
+arrlist_relational_operator(<=>) {
+  return static_cast<std::vector<Tp> >(lhs) <=>
+         ststic_cast<std::vector<Tp> >(rhs);
 }
 #endif
 
