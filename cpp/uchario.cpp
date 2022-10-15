@@ -68,6 +68,11 @@ std::istream& operator>>(std::istream& stream, UChar& res) {
             }
             goto STOP;
           }
+          // TODO: read whitespace charcter if stream's flag setted noskipws'
+          if (!(stream.flags() & 4096)) {
+            res = result;
+            goto STOP;
+          }
         } else {
           if (initialWhitespace) {
             initialWhitespace = FALSE;
@@ -86,4 +91,28 @@ std::istream& operator>>(std::istream& stream, UChar& res) {
   return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, UChar& target) { return stream; }
+std::ostream& operator<<(std::ostream& stream, UChar& target) {
+  char buffer[16] = {
+      0,
+  };
+  UConverter* converter;
+  UErrorCode errstate = U_ZERO_ERROR;
+  UChar Uch = target;
+
+  converter = ucnv_open(NULL, &errstate);
+  if (U_SUCCESS(errstate)) {
+    const UChar* us = &Uch;
+    const UChar* uLimit = us + 1;
+
+    char *s, *sLimit = buffer + (sizeof(buffer) - 1);
+
+    s = buffer;
+    ucnv_fromUnicode(converter, &s, sLimit, &us, uLimit, 0, false, &errstate);
+    if (s > buffer) {
+      stream << buffer;
+    }
+    ucnv_close(converter);
+  }
+
+  return stream;
+}
