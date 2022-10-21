@@ -35,8 +35,9 @@ class ArrayList {
   Tp& operator[](const size_t idx);  // indexing for read and writing element
   Tp operator[](const size_t idx) const;  // indexing for read-only element
 
-  operator std::string();      // type casting operator to string
-  operator std::vector<Tp>();  // type casting operator to vector
+  operator std::string();            // type casting operator to string
+  operator std::vector<Tp>();        // type casting operator to vector
+  operator std::vector<Tp>() const;  // type casting operator to const vector
 
   ArrayList<Tp>& operator=(const ArrayList<Tp>& arr);   // assign
   ArrayList<Tp>& operator+=(const ArrayList<Tp>& arr);  // extend and assign
@@ -163,6 +164,11 @@ ArrayList<Tp>::operator std::string() {
 
 template <class Tp>
 ArrayList<Tp>::operator std::vector<Tp>() {
+  return this->c;
+}
+
+template <class Tp>
+ArrayList<Tp>::operator std::vector<Tp>() const {
   return this->c;
 }
 
