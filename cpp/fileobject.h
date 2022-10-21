@@ -60,16 +60,17 @@ class CSVReader {
         line_num(0),
         dialect(Dialect()) {
     UChar c;
-    while (!file.eof()) {
-      do {
-        file >> std::noskipws >> c;
-        parsing(c);
-        if (state == MATCH_NEWLINE || file.eof()) {
-          state = START_RECORD;
-        }
-      } while (state != START_RECORD);
-      data.append(currfields);
-      currfields.clear();
+    // TODO : Solve field miss problem : The end field is missing during
+    // parsing.
+    while (true) {
+      file >> std::noskipws >> c;
+      parsing(c);
+      if (file.eof() || state == MATCH_NEWLINE) {
+        state = START_RECORD;
+        data.append(currfields);
+        currfields.clear();
+        if (file.eof()) break;
+      }
     }
   }
 
